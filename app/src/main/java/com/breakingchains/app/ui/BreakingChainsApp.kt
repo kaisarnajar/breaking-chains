@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import com.breakingchains.app.data.local.AppDatabase
 import com.breakingchains.app.data.model.UserRole
 import com.breakingchains.app.data.repository.AuthRepositoryImpl
+import com.breakingchains.app.data.repository.CallRequestRepositoryImpl
 import com.breakingchains.app.data.repository.TrackerRepositoryImpl
 import com.breakingchains.app.ui.navigation.Screen
 import com.breakingchains.app.ui.screens.admin.AdminDashboardScreen
@@ -25,6 +26,7 @@ import com.breakingchains.app.ui.screens.schedule.ScheduleCallScreen
 import com.breakingchains.app.ui.screens.tracker.TrackerViewModel
 import com.breakingchains.app.ui.screens.tracker.UserTrackerScreen
 import com.breakingchains.app.ui.theme.BreakingChainsTheme
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun BreakingChainsApp() {
@@ -32,10 +34,16 @@ fun BreakingChainsApp() {
         val context = LocalContext.current
         val navController = rememberNavController()
 
-        // Room Database & Persistent Repositories
+        // Firebase Firestore Instance safely retrieved
+        val firestore = remember {
+            runCatching { FirebaseFirestore.getInstance() }.getOrNull()
+        }
+
+        // Room Database & Offline-First Repositories
         val database = remember { AppDatabase.getInstance(context) }
-        val authRepository = remember { AuthRepositoryImpl(database.userDao()) }
-        val trackerRepository = remember { TrackerRepositoryImpl(database.relapseLogDao(), database.userDao()) }
+        val authRepository = remember { AuthRepositoryImpl(database.userDao(), firestore) }
+        val trackerRepository = remember { TrackerRepositoryImpl(database.relapseLogDao(), database.userDao(), firestore) }
+        val callRequestRepository = remember { CallRequestRepositoryImpl(database.callRequestDao(), firestore) }
 
         val authViewModel: AuthViewModel = viewModel { AuthViewModel(authRepository) }
         val trackerViewModel: TrackerViewModel = viewModel { TrackerViewModel(authRepository, trackerRepository) }

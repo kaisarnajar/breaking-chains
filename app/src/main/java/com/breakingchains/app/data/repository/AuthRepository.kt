@@ -7,9 +7,13 @@ import com.breakingchains.app.data.local.entity.toDomainModel
 import com.breakingchains.app.data.model.AuthResult
 import com.breakingchains.app.data.model.User
 import com.breakingchains.app.data.model.UserRole
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 interface AuthRepository {
     val currentUser: StateFlow<User?>
@@ -20,7 +24,8 @@ interface AuthRepository {
 }
 
 class AuthRepositoryImpl(
-    private val userDao: UserDao
+    private val userDao: UserDao,
+    private val firestore: FirebaseFirestore? = null
 ) : AuthRepository {
 
     private val _currentUser = MutableStateFlow<User?>(null)
@@ -37,25 +42,26 @@ class AuthRepositoryImpl(
             return AuthResult.Error("Email and password cannot be empty.")
         }
 
-        val existingEntity = userDao.getUserByEmail(cleanEmail)
-        if (existingEntity != null) {
-            if (existingEntity.passwordHash == password) {
-                val expectedRole = if (isAdminEmail(cleanEmail)) UserRole.ADMIN else existingEntity.role
-                val updatedUser = if (existingEntity.role != expectedRole) {
-                    val newEntity = existingEntity.copy(role = expectedRole)
-                    userDao.updateUser(newEntity)
-                    newEntity.toDomainModel()
-                } else {
-                    existingEntity.toDomainModel()
+        // 1. Single Source of Truth: Read from Room DB first (Zero latency)
+        var userEntity = userDao.getUserByEmail(cleanEmail)
+
+        if (userEntity != null) {
+            if (userEntity.passwordHash == password) {
+                val expectedRole = if (isAdminEmail(cleanEmail)) UserRole.ADMIN else userEntity.role
+                if (userEntity.role != expectedRole) {
+                    userEntity = userEntity.copy(role = expectedRole)
+                    userDao.updateUser(userEntity)
                 }
-                _currentUser.value = updatedUser
-                return AuthResult.Success(updatedUser)
+                val user = userEntity.toDomainModel()
+                _currentUser.value = user
+                syncUserToFirestoreInBackground(user, password)
+                return AuthResult.Success(user)
             } else {
                 return AuthResult.Error("Incorrect password. Please try again.")
             }
         }
 
-        // Quick onboarding / demo account auto-creation if valid credentials provided
+        // 2. Demo/Onboarding Fallback: If account not in local Room DB yet, create local entry
         if (password.length >= 6) {
             val role = if (isAdminEmail(cleanEmail)) UserRole.ADMIN else UserRole.USER
             val newUserEntity = UserEntity(
@@ -65,11 +71,12 @@ class AuthRepositoryImpl(
                 passwordHash = password,
                 role = role,
                 joinedDate = "October 2023",
-                activeStreakDays = if (role == UserRole.ADMIN) 365 else 1
+                activeStreakDays = if (role == UserRole.ADMIN) 365 else 124
             )
             userDao.insertUser(newUserEntity)
             val user = newUserEntity.toDomainModel()
             _currentUser.value = user
+            syncUserToFirestoreInBackground(user, password)
             return AuthResult.Success(user)
         }
 
@@ -108,10 +115,36 @@ class AuthRepositoryImpl(
             activeStreakDays = 0
         )
 
+        // 1. Write to Room DB immediately (Offline-First)
         userDao.insertUser(newUserEntity)
         val user = newUserEntity.toDomainModel()
         _currentUser.value = user
+
+        // 2. Fire-and-forget background sync to Firestore
+        syncUserToFirestoreInBackground(user, password)
+
         return AuthResult.Success(user)
+    }
+
+    private fun syncUserToFirestoreInBackground(user: User, passwordHash: String) {
+        if (firestore == null) return
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val userMap = mapOf(
+                    "id" to user.id,
+                    "name" to user.name,
+                    "email" to user.email,
+                    "role" to user.role.name,
+                    "avatarUrl" to (user.avatarUrl ?: ""),
+                    "joinedDate" to user.joinedDate,
+                    "activeStreakDays" to user.activeStreakDays,
+                    "lastSyncedAt" to System.currentTimeMillis()
+                )
+                firestore.collection("users").document(user.id).set(userMap)
+            } catch (e: Exception) {
+                // Silently fallback if offline or Firebase not yet initialized
+            }
+        }
     }
 
     override suspend fun resetPassword(email: String): Result<String> {
