@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.appdistribution)
 }
 
 android {
@@ -23,6 +24,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            appDistribution {
+                testers = "kaisarnajar11114@gmail.com"
+                releaseNotes = "Automated test build for Breaking Chains"
+            }
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
