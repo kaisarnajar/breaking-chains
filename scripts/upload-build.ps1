@@ -15,7 +15,7 @@ Write-Host "====================================================================
 Write-Host "🚀 Building Breaking Chains Debug APK and Uploading to Firebase App Distribution..." -ForegroundColor Cyan
 Write-Host "====================================================================" -ForegroundColor Cyan
 
-.\gradlew.bat assembleDebug appDistributionUploadDebug
+.\gradlew.bat clean assembleDebug appDistributionUploadDebug
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "====================================================================" -ForegroundColor Green

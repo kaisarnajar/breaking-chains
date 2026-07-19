@@ -165,7 +165,7 @@ fun CalendarMonthView(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = Color(0xFFF1F5F9))
+            HorizontalDivider(color = Color(0xFFF1F5F9))
             Spacer(modifier = Modifier.height(12.dp))
 
             // Bottom Legend

@@ -26,7 +26,7 @@ echo ====================================================================
 echo Starting Gradle build and App Distribution upload...
 echo ====================================================================
 
-call .\gradlew.bat assembleDebug appDistributionUploadDebug
+call .\gradlew.bat clean assembleDebug appDistributionUploadDebug
 
 if %ERRORLEVEL% EQU 0 (
     echo ====================================================================
