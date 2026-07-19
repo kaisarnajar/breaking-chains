@@ -9,21 +9,32 @@ const { getFirestore } = require('firebase-admin/firestore');
 
 const keyPath = path.join(__dirname, '..', 'serviceAccountKey.json');
 
+if (!fs.existsSync(keyPath)) {
+  console.log("\n====================================================================");
+  console.log("⚠️  Notice: Firebase Admin Service Account Key file is required for CLI seeding.");
+  console.log("====================================================================");
+  console.log("\n💡 Option 1 (Easiest — Zero setup required):");
+  console.log("   1. Open the Breaking Chains app on your phone or emulator.");
+  console.log("   2. Log in as Admin: kaisarnajar11114@gmail.com (Password: 123456)");
+  console.error("   3. Tap 'Wipe & Seed Firestore Mock Data' button inside the app!");
+  console.log("\n💡 Option 2 (To enable 'npm run seed-db' in terminal):");
+  console.log("   1. Go to Firebase Console -> Project Settings -> Service accounts:");
+  console.log("      https://console.firebase.google.com/project/breaking-chains-e1078/settings/serviceaccounts/adminsdk");
+  console.log("   2. Click 'Generate new private key' (downloads a .json file).");
+  console.log("   3. Save the file as 'serviceAccountKey.json' in your project root folder:");
+  console.log(`      ${path.resolve(__dirname, '..', 'serviceAccountKey.json')}`);
+  console.log("   4. Run 'npm run seed-db' again!\n");
+  console.log("====================================================================\n");
+  process.exit(0);
+}
+
 if (!getApps().length) {
-  if (fs.existsSync(keyPath)) {
-    console.log("🔑 Loaded serviceAccountKey.json credentials.");
-    const serviceAccount = require(keyPath);
-    initializeApp({
-      credential: cert(serviceAccount),
-      projectId: 'breaking-chains-e1078'
-    });
-  } else {
-    try {
-      initializeApp({
-        projectId: 'breaking-chains-e1078'
-      });
-    } catch (e) { }
-  }
+  console.log("🔑 Loaded serviceAccountKey.json credentials.");
+  const serviceAccount = require(keyPath);
+  initializeApp({
+    credential: cert(serviceAccount),
+    projectId: 'breaking-chains-e1078'
+  });
 }
 
 const db = getFirestore();
@@ -216,14 +227,6 @@ async function seedFirestore() {
 }
 
 seedFirestore().catch(err => {
-  console.error("\n❌ Node Seeding Error: Missing Firebase Admin Service Account key.");
-  console.error("\n💡 Easiest Solution (No setup required):");
-  console.error("1. Open the Android App.");
-  console.error("2. Log in as Admin: kaisarnajar11114@gmail.com (Password: 123456).");
-  console.error("3. Tap 'Wipe & Seed Firestore Mock Data' — zero credentials required!\n");
-  console.error("💡 Alternatively (To run via Node command line):");
-  console.error("1. Go to Firebase Console -> Project Settings -> Service accounts.");
-  console.error("2. Click 'Generate new private key'.");
-  console.error("3. Save as 'serviceAccountKey.json' in your project root folder.\n");
+  console.error("\n❌ Seeding Error:", err.message);
   process.exit(1);
 });
