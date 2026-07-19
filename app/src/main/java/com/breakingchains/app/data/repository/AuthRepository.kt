@@ -1,5 +1,8 @@
 package com.breakingchains.app.data.repository
 
+import com.breakingchains.app.data.local.dao.UserDao
+import com.breakingchains.app.data.local.entity.UserEntity
+import com.breakingchains.app.data.local.entity.toDomainModel
 import com.breakingchains.app.data.model.AuthResult
 import com.breakingchains.app.data.model.User
 import com.breakingchains.app.data.model.UserRole
@@ -15,65 +18,65 @@ interface AuthRepository {
     fun logout()
 }
 
-class AuthRepositoryImpl : AuthRepository {
-
-    // Mock in-memory user registry for initial development
-    private val registeredUsers = mutableMapOf<String, Pair<User, String>>(
-        "user@example.com" to Pair(
-            User(
-                id = "u_101",
-                name = "Elena Richardson",
-                email = "user@example.com",
-                role = UserRole.USER,
-                joinedDate = "October 12, 2023",
-                activeStreakDays = 124
-            ),
-            "password123"
-        ),
-        "admin@example.com" to Pair(
-            User(
-                id = "a_999",
-                name = "Serenity Mentor Admin",
-                email = "admin@example.com",
-                role = UserRole.ADMIN,
-                joinedDate = "January 1, 2023",
-                activeStreakDays = 365
-            ),
-            "admin123"
-        )
-    )
+class AuthRepositoryImpl(
+    private val userDao: UserDao? = null
+) : AuthRepository {
 
     private val _currentUser = MutableStateFlow<User?>(null)
     override val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
+    // Fallback in-memory map for preview/tests without DB context
+    private val inMemoryUsers = mutableMapOf<String, Pair<User, String>>()
+
     override suspend fun login(email: String, password: String, role: UserRole): AuthResult {
         val cleanEmail = email.trim().lowercase()
-        val userPair = registeredUsers[cleanEmail]
+        if (cleanEmail.isEmpty() || password.isEmpty()) {
+            return AuthResult.Error("Email and password cannot be empty.")
+        }
 
-        return if (userPair != null && userPair.second == password) {
-            val user = userPair.first
-            if (user.role == role) {
-                _currentUser.value = user
-                AuthResult.Success(user)
-            } else {
-                AuthResult.Error("Role mismatch. Please select the correct role account type.")
+        if (userDao != null) {
+            val existingEntity = userDao.getUserByEmail(cleanEmail)
+            if (existingEntity != null) {
+                if (existingEntity.passwordHash == password) {
+                    if (existingEntity.role == role) {
+                        val user = existingEntity.toDomainModel()
+                        _currentUser.value = user
+                        return AuthResult.Success(user)
+                    } else {
+                        return AuthResult.Error("Role mismatch. Please select the correct role account type.")
+                    }
+                } else {
+                    return AuthResult.Error("Incorrect password.")
+                }
             }
-        } else if (cleanEmail.isNotEmpty() && password.length >= 6) {
-            // Auto-create/demo login fallback for easy testing
+        } else {
+            val pair = inMemoryUsers[cleanEmail]
+            if (pair != null && pair.second == password) {
+                if (pair.first.role == role) {
+                    _currentUser.value = pair.first
+                    return AuthResult.Success(pair.first)
+                } else {
+                    return AuthResult.Error("Role mismatch. Please select the correct role account type.")
+                }
+            }
+        }
+
+        // Demo fallback account auto-creation if demo email provided
+        if (password.length >= 6) {
             val newUser = User(
                 id = "u_${System.currentTimeMillis()}",
                 name = cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
                 email = cleanEmail,
                 role = role,
                 joinedDate = "October 2023",
-                activeStreakDays = 1
+                activeStreakDays = 124
             )
-            registeredUsers[cleanEmail] = Pair(newUser, password)
+            saveUserToDbOrMemory(newUser, password)
             _currentUser.value = newUser
-            AuthResult.Success(newUser)
-        } else {
-            AuthResult.Error("Invalid email or password. Password must be at least 6 characters.")
+            return AuthResult.Success(newUser)
         }
+
+        return AuthResult.Error("Invalid credentials. Password must be at least 6 characters.")
     }
 
     override suspend fun register(
@@ -93,7 +96,12 @@ class AuthRepositoryImpl : AuthRepository {
             return AuthResult.Error("Full Name cannot be empty.")
         }
 
-        if (registeredUsers.containsKey(cleanEmail)) {
+        if (userDao != null) {
+            val existing = userDao.getUserByEmail(cleanEmail)
+            if (existing != null) {
+                return AuthResult.Error("An account with this email already exists.")
+            }
+        } else if (inMemoryUsers.containsKey(cleanEmail)) {
             return AuthResult.Error("An account with this email already exists.")
         }
 
@@ -105,9 +113,29 @@ class AuthRepositoryImpl : AuthRepository {
             joinedDate = "Today",
             activeStreakDays = 0
         )
-        registeredUsers[cleanEmail] = Pair(newUser, password)
+
+        saveUserToDbOrMemory(newUser, password)
         _currentUser.value = newUser
         return AuthResult.Success(newUser)
+    }
+
+    private suspend fun saveUserToDbOrMemory(user: User, passwordHash: String) {
+        if (userDao != null) {
+            userDao.insertUser(
+                UserEntity(
+                    id = user.id,
+                    name = user.name,
+                    email = user.email,
+                    passwordHash = passwordHash,
+                    role = user.role,
+                    avatarUrl = user.avatarUrl,
+                    joinedDate = user.joinedDate,
+                    activeStreakDays = user.activeStreakDays
+                )
+            )
+        } else {
+            inMemoryUsers[user.email] = Pair(user, passwordHash)
+        }
     }
 
     override suspend fun resetPassword(email: String): Result<String> {

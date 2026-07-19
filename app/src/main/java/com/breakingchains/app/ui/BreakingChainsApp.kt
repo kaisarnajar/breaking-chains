@@ -4,10 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.breakingchains.app.data.local.AppDatabase
 import com.breakingchains.app.data.model.UserRole
 import com.breakingchains.app.data.repository.AuthRepositoryImpl
 import com.breakingchains.app.ui.navigation.Screen
@@ -24,10 +26,12 @@ import com.breakingchains.app.ui.theme.BreakingChainsTheme
 @Composable
 fun BreakingChainsApp() {
     BreakingChainsTheme {
+        val context = LocalContext.current
         val navController = rememberNavController()
 
-        // Persistent Auth Repository & ViewModel binding
-        val authRepository = remember { AuthRepositoryImpl() }
+        // Room Database & Persistent Auth Repository
+        val database = remember { AppDatabase.getInstance(context) }
+        val authRepository = remember { AuthRepositoryImpl(database.userDao()) }
         val authViewModel: AuthViewModel = viewModel { AuthViewModel(authRepository) }
 
         val currentUser by authViewModel.currentUser.collectAsState()
