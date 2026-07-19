@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "998603456498",
+    "project_id": "breaking-chains-e1078",
+    "storage_bucket": "breaking-chains-e1078.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:998603456498:android:196457228cdbc2b6fcb56b",
+        "android_client_info": {
+          "package_name": "com.breakingchains.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYHaNjCjp1KJbeeCcGVBoqx0NPOOeBbao"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
