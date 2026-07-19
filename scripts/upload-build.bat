@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ====================================================================
-echo Building Breaking Chains Debug APK and Uploading to Firebase...
+echo 🚀 Building Breaking Chains Debug APK & Uploading to Firebase App Distribution
 echo ====================================================================
 
 :: Auto-detect JAVA_HOME if not set
@@ -22,11 +22,16 @@ if "%JAVA_HOME%"=="" (
     set "PATH=%JAVA_HOME%\bin;%PATH%"
 )
 
+echo.
+set "BUILD_NAME="
+set /p BUILD_NAME="Please enter a name / release note for this build: "
+if "!BUILD_NAME!"=="" set "BUILD_NAME=Breaking Chains Test Build"
+
 echo ====================================================================
-echo Starting Gradle build and App Distribution upload...
+echo Building APK with release name: "!BUILD_NAME!"
 echo ====================================================================
 
-call .\gradlew.bat clean assembleDebug appDistributionUploadDebug
+call .\gradlew.bat clean assembleDebug appDistributionUploadDebug -PappDistributionReleaseNotes="!BUILD_NAME!"
 
 if %ERRORLEVEL% EQU 0 (
     echo ====================================================================
@@ -34,7 +39,7 @@ if %ERRORLEVEL% EQU 0 (
     echo ====================================================================
 ) else (
     echo ====================================================================
-    echo FAILED: Upload failed. If authentication failed, please run 'firebase login'
+    echo FAILED: Upload failed. If authentication failed, please run 'npx firebase-tools login'
     echo or set FIREBASE_TOKEN in your environment.
     echo ====================================================================
 )

@@ -12,10 +12,17 @@ if (-not $env:JAVA_HOME) {
 }
 
 Write-Host "====================================================================" -ForegroundColor Cyan
-Write-Host "🚀 Building Breaking Chains Debug APK and Uploading to Firebase App Distribution..." -ForegroundColor Cyan
+Write-Host "🚀 Building Breaking Chains Debug APK & Uploading to Firebase App Distribution" -ForegroundColor Cyan
 Write-Host "====================================================================" -ForegroundColor Cyan
 
-.\gradlew.bat clean assembleDebug appDistributionUploadDebug
+$buildName = Read-Host "Please enter a name / release note for this build"
+if ([string]::IsNullOrWhiteSpace($buildName)) {
+    $buildName = "Breaking Chains Test Build"
+}
+
+Write-Host "Building APK with release name: '$buildName'..." -ForegroundColor Yellow
+
+.\gradlew.bat clean assembleDebug appDistributionUploadDebug "-PappDistributionReleaseNotes=$buildName"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "====================================================================" -ForegroundColor Green
@@ -23,6 +30,6 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "====================================================================" -ForegroundColor Green
 } else {
     Write-Host "====================================================================" -ForegroundColor Red
-    Write-Host "❌ Upload failed. Please run 'firebase login' or set FIREBASE_TOKEN environment variable." -ForegroundColor Red
+    Write-Host "❌ Upload failed. Please run 'npx firebase-tools login' or set FIREBASE_TOKEN environment variable." -ForegroundColor Red
     Write-Host "====================================================================" -ForegroundColor Red
 }

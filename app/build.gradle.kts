@@ -27,9 +27,14 @@ android {
 
     buildTypes {
         getByName("debug") {
+            val customNotes = (project.findProperty("appDistributionReleaseNotes") as? String)
+                ?.takeIf { it.isNotBlank() }
+                ?: System.getenv("RELEASE_NOTES")
+                ?: "Breaking Chains Test Build"
+
             firebaseAppDistribution {
                 testers = "kaisarnajar11114@gmail.com"
-                releaseNotes = "Automated test build for Breaking Chains"
+                releaseNotes = customNotes
             }
         }
         getByName("release") {
