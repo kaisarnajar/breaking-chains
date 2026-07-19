@@ -2,7 +2,6 @@ package com.breakingchains.app.ui.screens.auth
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,7 +24,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.breakingchains.app.data.model.UserRole
 import com.breakingchains.app.ui.theme.DeepTeal
 import com.breakingchains.app.ui.theme.MintPrimary
 
@@ -34,9 +32,8 @@ fun LoginScreen(
     state: LoginUiState,
     onEmailChanged: (String) -> Unit,
     onPasswordChanged: (String) -> Unit,
-    onRoleSelected: (UserRole) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
-    onLoginClick: (UserRole) -> Unit,
+    onLoginClick: () -> Unit,
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit
 ) {
@@ -89,35 +86,6 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Role Toggle Selector (User vs Admin)
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(50.dp)),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(4.dp)
-                    ) {
-                        RoleTabButton(
-                            text = "User Account",
-                            isSelected = state.selectedRole == UserRole.USER,
-                            onClick = { onRoleSelected(UserRole.USER) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        RoleTabButton(
-                            text = "Admin Mentor",
-                            isSelected = state.selectedRole == UserRole.ADMIN,
-                            onClick = { onRoleSelected(UserRole.ADMIN) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
                 // Main Form Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -133,7 +101,7 @@ fun LoginScreen(
                             .padding(24.dp)
                     ) {
                         Text(
-                            text = if (state.selectedRole == UserRole.USER) "User Login" else "Admin Login",
+                            text = "Log In",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -224,7 +192,7 @@ fun LoginScreen(
 
                         // Submit Button
                         Button(
-                            onClick = { onLoginClick(state.selectedRole) },
+                            onClick = onLoginClick,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
@@ -272,30 +240,5 @@ fun LoginScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun RoleTabButton(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(50.dp))
-            .background(if (isSelected) DeepTeal else Color.Transparent)
-            .clickable { onClick() }
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge.copy(
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-            ),
-            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

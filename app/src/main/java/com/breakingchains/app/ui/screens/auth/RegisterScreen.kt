@@ -15,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -23,7 +22,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.breakingchains.app.data.model.UserRole
 import com.breakingchains.app.ui.theme.DeepTeal
 
 @Composable
@@ -33,9 +31,8 @@ fun RegisterScreen(
     onEmailChanged: (String) -> Unit,
     onPasswordChanged: (String) -> Unit,
     onConfirmPasswordChanged: (String) -> Unit,
-    onRoleSelected: (UserRole) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
-    onRegisterClick: (UserRole) -> Unit,
+    onRegisterClick: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     Scaffold(
@@ -70,35 +67,6 @@ fun RegisterScreen(
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
-
-                // Role Toggle Selector
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(50.dp)),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(4.dp)
-                    ) {
-                        RoleTabButton(
-                            text = "Register User",
-                            isSelected = state.selectedRole == UserRole.USER,
-                            onClick = { onRoleSelected(UserRole.USER) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        RoleTabButton(
-                            text = "Register Admin",
-                            isSelected = state.selectedRole == UserRole.ADMIN,
-                            onClick = { onRoleSelected(UserRole.ADMIN) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -224,7 +192,7 @@ fun RegisterScreen(
 
                         // Submit Button
                         Button(
-                            onClick = { onRegisterClick(state.selectedRole) },
+                            onClick = onRegisterClick,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),

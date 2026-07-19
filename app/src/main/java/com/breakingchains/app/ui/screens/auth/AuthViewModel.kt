@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 data class LoginUiState(
     val emailInput: String = "",
     val passwordInput: String = "",
-    val selectedRole: UserRole = UserRole.USER,
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
@@ -25,7 +24,6 @@ data class RegisterUiState(
     val emailInput: String = "",
     val passwordInput: String = "",
     val confirmPasswordInput: String = "",
-    val selectedRole: UserRole = UserRole.USER,
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
@@ -62,10 +60,6 @@ class AuthViewModel(
         _loginState.update { it.copy(passwordInput = password, errorMessage = null) }
     }
 
-    fun onLoginRoleSelected(role: UserRole) {
-        _loginState.update { it.copy(selectedRole = role, errorMessage = null) }
-    }
-
     fun toggleLoginPasswordVisibility() {
         _loginState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
     }
@@ -77,8 +71,7 @@ class AuthViewModel(
         viewModelScope.launch {
             val result = authRepository.login(
                 email = currentState.emailInput,
-                password = currentState.passwordInput,
-                role = currentState.selectedRole
+                password = currentState.passwordInput
             )
             when (result) {
                 is AuthResult.Success -> {
@@ -109,10 +102,6 @@ class AuthViewModel(
         _registerState.update { it.copy(confirmPasswordInput = password, errorMessage = null) }
     }
 
-    fun onRegisterRoleSelected(role: UserRole) {
-        _registerState.update { it.copy(selectedRole = role, errorMessage = null) }
-    }
-
     fun toggleRegisterPasswordVisibility() {
         _registerState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
     }
@@ -131,8 +120,7 @@ class AuthViewModel(
             val result = authRepository.register(
                 name = currentState.nameInput,
                 email = currentState.emailInput,
-                password = currentState.passwordInput,
-                role = currentState.selectedRole
+                password = currentState.passwordInput
             )
             when (result) {
                 is AuthResult.Success -> {

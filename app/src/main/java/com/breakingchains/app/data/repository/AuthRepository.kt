@@ -1,5 +1,6 @@
 package com.breakingchains.app.data.repository
 
+import com.breakingchains.app.BuildConfig
 import com.breakingchains.app.data.local.dao.UserDao
 import com.breakingchains.app.data.local.entity.UserEntity
 import com.breakingchains.app.data.local.entity.toDomainModel
@@ -12,78 +13,73 @@ import kotlinx.coroutines.flow.asStateFlow
 
 interface AuthRepository {
     val currentUser: StateFlow<User?>
-    suspend fun login(email: String, password: String, role: UserRole): AuthResult
-    suspend fun register(name: String, email: String, password: String, role: UserRole): AuthResult
+    suspend fun login(email: String, password: String): AuthResult
+    suspend fun register(name: String, email: String, password: String): AuthResult
     suspend fun resetPassword(email: String): Result<String>
     fun logout()
 }
 
 class AuthRepositoryImpl(
-    private val userDao: UserDao? = null
+    private val userDao: UserDao
 ) : AuthRepository {
 
     private val _currentUser = MutableStateFlow<User?>(null)
     override val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
-    // Fallback in-memory map for preview/tests without DB context
-    private val inMemoryUsers = mutableMapOf<String, Pair<User, String>>()
+    private fun isAdminEmail(email: String): Boolean {
+        val adminList = BuildConfig.ADMIN_EMAILS.split(",").map { it.trim().lowercase() }
+        return adminList.contains(email.trim().lowercase())
+    }
 
-    override suspend fun login(email: String, password: String, role: UserRole): AuthResult {
+    override suspend fun login(email: String, password: String): AuthResult {
         val cleanEmail = email.trim().lowercase()
         if (cleanEmail.isEmpty() || password.isEmpty()) {
             return AuthResult.Error("Email and password cannot be empty.")
         }
 
-        if (userDao != null) {
-            val existingEntity = userDao.getUserByEmail(cleanEmail)
-            if (existingEntity != null) {
-                if (existingEntity.passwordHash == password) {
-                    if (existingEntity.role == role) {
-                        val user = existingEntity.toDomainModel()
-                        _currentUser.value = user
-                        return AuthResult.Success(user)
-                    } else {
-                        return AuthResult.Error("Role mismatch. Please select the correct role account type.")
-                    }
+        val existingEntity = userDao.getUserByEmail(cleanEmail)
+        if (existingEntity != null) {
+            if (existingEntity.passwordHash == password) {
+                val expectedRole = if (isAdminEmail(cleanEmail)) UserRole.ADMIN else existingEntity.role
+                val updatedUser = if (existingEntity.role != expectedRole) {
+                    val newEntity = existingEntity.copy(role = expectedRole)
+                    userDao.updateUser(newEntity)
+                    newEntity.toDomainModel()
                 } else {
-                    return AuthResult.Error("Incorrect password.")
+                    existingEntity.toDomainModel()
                 }
-            }
-        } else {
-            val pair = inMemoryUsers[cleanEmail]
-            if (pair != null && pair.second == password) {
-                if (pair.first.role == role) {
-                    _currentUser.value = pair.first
-                    return AuthResult.Success(pair.first)
-                } else {
-                    return AuthResult.Error("Role mismatch. Please select the correct role account type.")
-                }
+                _currentUser.value = updatedUser
+                return AuthResult.Success(updatedUser)
+            } else {
+                return AuthResult.Error("Incorrect password. Please try again.")
             }
         }
 
-        // Demo fallback account auto-creation if demo email provided
+        // Quick onboarding / demo account auto-creation if valid credentials provided
         if (password.length >= 6) {
-            val newUser = User(
+            val role = if (isAdminEmail(cleanEmail)) UserRole.ADMIN else UserRole.USER
+            val newUserEntity = UserEntity(
                 id = "u_${System.currentTimeMillis()}",
                 name = cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
                 email = cleanEmail,
+                passwordHash = password,
                 role = role,
                 joinedDate = "October 2023",
-                activeStreakDays = 124
+                activeStreakDays = if (role == UserRole.ADMIN) 365 else 1
             )
-            saveUserToDbOrMemory(newUser, password)
-            _currentUser.value = newUser
-            return AuthResult.Success(newUser)
+            userDao.insertUser(newUserEntity)
+            val user = newUserEntity.toDomainModel()
+            _currentUser.value = user
+            return AuthResult.Success(user)
         }
 
-        return AuthResult.Error("Invalid credentials. Password must be at least 6 characters.")
+        return AuthResult.Error("Account not found. Please register first.")
     }
 
     override suspend fun register(
         name: String,
         email: String,
-        password: String,
-        role: UserRole
+        password: String
     ): AuthResult {
         val cleanEmail = email.trim().lowercase()
         if (cleanEmail.isEmpty() || !cleanEmail.contains("@")) {
@@ -96,46 +92,26 @@ class AuthRepositoryImpl(
             return AuthResult.Error("Full Name cannot be empty.")
         }
 
-        if (userDao != null) {
-            val existing = userDao.getUserByEmail(cleanEmail)
-            if (existing != null) {
-                return AuthResult.Error("An account with this email already exists.")
-            }
-        } else if (inMemoryUsers.containsKey(cleanEmail)) {
-            return AuthResult.Error("An account with this email already exists.")
+        val existing = userDao.getUserByEmail(cleanEmail)
+        if (existing != null) {
+            return AuthResult.Error("An account with this email already exists. Please log in.")
         }
 
-        val newUser = User(
+        val role = if (isAdminEmail(cleanEmail)) UserRole.ADMIN else UserRole.USER
+        val newUserEntity = UserEntity(
             id = "u_${System.currentTimeMillis()}",
             name = name.trim(),
             email = cleanEmail,
+            passwordHash = password,
             role = role,
             joinedDate = "Today",
             activeStreakDays = 0
         )
 
-        saveUserToDbOrMemory(newUser, password)
-        _currentUser.value = newUser
-        return AuthResult.Success(newUser)
-    }
-
-    private suspend fun saveUserToDbOrMemory(user: User, passwordHash: String) {
-        if (userDao != null) {
-            userDao.insertUser(
-                UserEntity(
-                    id = user.id,
-                    name = user.name,
-                    email = user.email,
-                    passwordHash = passwordHash,
-                    role = user.role,
-                    avatarUrl = user.avatarUrl,
-                    joinedDate = user.joinedDate,
-                    activeStreakDays = user.activeStreakDays
-                )
-            )
-        } else {
-            inMemoryUsers[user.email] = Pair(user, passwordHash)
-        }
+        userDao.insertUser(newUserEntity)
+        val user = newUserEntity.toDomainModel()
+        _currentUser.value = user
+        return AuthResult.Success(user)
     }
 
     override suspend fun resetPassword(email: String): Result<String> {

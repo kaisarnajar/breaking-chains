@@ -55,9 +55,8 @@ fun BreakingChainsApp() {
                     state = loginState,
                     onEmailChanged = authViewModel::onLoginEmailChanged,
                     onPasswordChanged = authViewModel::onLoginPasswordChanged,
-                    onRoleSelected = authViewModel::onLoginRoleSelected,
                     onTogglePasswordVisibility = authViewModel::toggleLoginPasswordVisibility,
-                    onLoginClick = { selectedRole ->
+                    onLoginClick = {
                         authViewModel.login { role ->
                             val targetRoute = if (role == UserRole.ADMIN) Screen.AdminDashboard.route else Screen.UserTracker.route
                             navController.navigate(targetRoute) {
@@ -81,9 +80,8 @@ fun BreakingChainsApp() {
                     onEmailChanged = authViewModel::onRegisterEmailChanged,
                     onPasswordChanged = authViewModel::onRegisterPasswordChanged,
                     onConfirmPasswordChanged = authViewModel::onRegisterConfirmPasswordChanged,
-                    onRoleSelected = authViewModel::onRegisterRoleSelected,
                     onTogglePasswordVisibility = authViewModel::toggleRegisterPasswordVisibility,
-                    onRegisterClick = { selectedRole ->
+                    onRegisterClick = {
                         authViewModel.register { role ->
                             val targetRoute = if (role == UserRole.ADMIN) Screen.AdminDashboard.route else Screen.UserTracker.route
                             navController.navigate(targetRoute) {
