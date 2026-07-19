@@ -7,15 +7,16 @@
  * 3. Run: npm run seed-db (or node scripts/seed-firestore.js)
  */
 
-const admin = require('firebase-admin');
+const { initializeApp, getApps } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: 'breaking-chains'
+if (!getApps().length) {
+  initializeApp({
+    projectId: 'breaking-chains-e1078'
   });
 }
 
-const db = admin.firestore();
+const db = getFirestore();
 
 async function deleteCollection(collectionPath, batchSize = 100) {
   const collectionRef = db.collection(collectionPath);
