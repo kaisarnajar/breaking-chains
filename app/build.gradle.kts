@@ -1,3 +1,5 @@
+import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -24,13 +26,13 @@ android {
     }
 
     buildTypes {
-        debug {
-            appDistribution {
+        getByName("debug") {
+            firebaseAppDistribution {
                 testers = "kaisarnajar11114@gmail.com"
                 releaseNotes = "Automated test build for Breaking Chains"
             }
         }
-        release {
+        getByName("release") {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
