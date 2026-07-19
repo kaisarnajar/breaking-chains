@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import com.breakingchains.app.data.local.AppDatabase
 import com.breakingchains.app.data.model.UserRole
 import com.breakingchains.app.data.repository.AuthRepositoryImpl
+import com.breakingchains.app.data.repository.TrackerRepositoryImpl
 import com.breakingchains.app.ui.navigation.Screen
 import com.breakingchains.app.ui.screens.admin.AdminDashboardScreen
 import com.breakingchains.app.ui.screens.auth.AuthViewModel
@@ -19,7 +20,9 @@ import com.breakingchains.app.ui.screens.auth.ForgotPasswordScreen
 import com.breakingchains.app.ui.screens.auth.LoginScreen
 import com.breakingchains.app.ui.screens.auth.RegisterScreen
 import com.breakingchains.app.ui.screens.relapse.RelapseLogScreen
+import com.breakingchains.app.ui.screens.relapse.RelapseLogViewModel
 import com.breakingchains.app.ui.screens.schedule.ScheduleCallScreen
+import com.breakingchains.app.ui.screens.tracker.TrackerViewModel
 import com.breakingchains.app.ui.screens.tracker.UserTrackerScreen
 import com.breakingchains.app.ui.theme.BreakingChainsTheme
 
@@ -29,15 +32,21 @@ fun BreakingChainsApp() {
         val context = LocalContext.current
         val navController = rememberNavController()
 
-        // Room Database & Persistent Auth Repository
+        // Room Database & Persistent Repositories
         val database = remember { AppDatabase.getInstance(context) }
         val authRepository = remember { AuthRepositoryImpl(database.userDao()) }
+        val trackerRepository = remember { TrackerRepositoryImpl(database.relapseLogDao(), database.userDao()) }
+
         val authViewModel: AuthViewModel = viewModel { AuthViewModel(authRepository) }
+        val trackerViewModel: TrackerViewModel = viewModel { TrackerViewModel(authRepository, trackerRepository) }
+        val relapseLogViewModel: RelapseLogViewModel = viewModel { RelapseLogViewModel(authRepository, trackerRepository) }
 
         val currentUser by authViewModel.currentUser.collectAsState()
         val loginState by authViewModel.loginState.collectAsState()
         val registerState by authViewModel.registerState.collectAsState()
         val forgotPasswordState by authViewModel.forgotPasswordState.collectAsState()
+        val trackerUiState by trackerViewModel.uiState.collectAsState()
+        val relapseLogUiState by relapseLogViewModel.uiState.collectAsState()
 
         val startDestination = if (currentUser != null) {
             if (currentUser?.role == UserRole.ADMIN) Screen.AdminDashboard.route else Screen.UserTracker.route
@@ -109,6 +118,9 @@ fun BreakingChainsApp() {
             // Core App Screens
             composable(Screen.UserTracker.route) {
                 UserTrackerScreen(
+                    state = trackerUiState,
+                    onPreviousMonth = trackerViewModel::onPreviousMonth,
+                    onNextMonth = trackerViewModel::onNextMonth,
                     onNavigateToLogRelapse = { navController.navigate(Screen.RelapseLog.route) },
                     onNavigateToScheduleCall = { navController.navigate(Screen.ScheduleCall.route) },
                     onNavigateToAdmin = { navController.navigate(Screen.AdminDashboard.route) }
@@ -117,6 +129,15 @@ fun BreakingChainsApp() {
 
             composable(Screen.RelapseLog.route) {
                 RelapseLogScreen(
+                    state = relapseLogUiState,
+                    onTriggerSelected = relapseLogViewModel::onTriggerSelected,
+                    onMoodSelected = relapseLogViewModel::onMoodSelected,
+                    onNoteChanged = relapseLogViewModel::onNoteChanged,
+                    onSubmitClick = {
+                        relapseLogViewModel.submitRelapseLog {
+                            navController.popBackStack()
+                        }
+                    },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
