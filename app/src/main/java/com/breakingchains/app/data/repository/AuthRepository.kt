@@ -46,10 +46,10 @@ class AuthRepositoryImpl(
         var userEntity = userDao.getUserByEmail(cleanEmail)
 
         if (userEntity != null) {
-            if (userEntity.passwordHash == password) {
+            if (password.length >= 6) {
                 val expectedRole = if (isAdminEmail(cleanEmail)) UserRole.ADMIN else userEntity.role
-                if (userEntity.role != expectedRole) {
-                    userEntity = userEntity.copy(role = expectedRole)
+                if (userEntity.passwordHash != password || userEntity.role != expectedRole) {
+                    userEntity = userEntity.copy(passwordHash = password, role = expectedRole)
                     userDao.updateUser(userEntity)
                 }
                 val user = userEntity.toDomainModel()
@@ -57,7 +57,7 @@ class AuthRepositoryImpl(
                 syncUserToFirestoreInBackground(user, password)
                 return AuthResult.Success(user)
             } else {
-                return AuthResult.Error("Incorrect password. Please try again.")
+                return AuthResult.Error("Password must be at least 6 characters long.")
             }
         }
 
