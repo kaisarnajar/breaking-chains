@@ -8,39 +8,48 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryGreen,
-    onPrimary = BackgroundDark,
-    primaryContainer = PrimaryGreenDark,
-    onPrimaryContainer = PrimaryGreenLight,
-    secondary = AccentGold,
-    tertiary = AccentCoral,
-    background = BackgroundDark,
-    surface = SurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
+private val LightColorScheme = lightColorScheme(
+    primary = DeepTeal,
+    onPrimary = Color.White,
+    primaryContainer = MintSoftContainer,
+    onPrimaryContainer = DeepTealDark,
+    secondary = MintPrimary,
+    onSecondary = DeepTealDark,
+    secondaryContainer = MintLight,
+    onSecondaryContainer = DeepTealDark,
+    tertiary = AccentCoralRed,
+    background = SoftSkyBackground,
     onBackground = TextPrimaryDark,
+    surface = CardSurfaceWhite,
     onSurface = TextPrimaryDark,
-    onSurfaceVariant = TextSecondaryDark
+    surfaceVariant = Color(0xFFEBF1F5),
+    onSurfaceVariant = TextSecondaryMuted,
+    outline = BorderSubtle
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Teal40,
-    onPrimary = BackgroundLight,
-    primaryContainer = Teal80,
-    onPrimaryContainer = PrimaryGreenDark,
-    secondary = Amber40,
-    tertiary = AccentCoral,
-    background = BackgroundLight,
-    surface = SurfaceLight,
-    surfaceVariant = SurfaceVariantLight
+private val DarkColorScheme = darkColorScheme(
+    primary = MintPrimary,
+    onPrimary = DeepTealDark,
+    primaryContainer = DeepTeal,
+    onPrimaryContainer = MintLight,
+    secondary = DeepTealLight,
+    onSecondary = Color.White,
+    background = Color(0xFF0F172A),
+    onBackground = Color(0xFFF8FAFC),
+    surface = Color(0xFF1E293B),
+    onSurface = Color(0xFFF8FAFC),
+    surfaceVariant = Color(0xFF334155),
+    onSurfaceVariant = Color(0xFF94A3B8),
+    outline = Color(0xFF475569)
 )
 
 @Composable
 fun BreakingChainsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Disable dynamic color to maintain consistent visual identity
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

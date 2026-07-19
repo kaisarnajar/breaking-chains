@@ -1,11 +1,21 @@
 package com.breakingchains.app.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.breakingchains.app.data.model.UserRole
+import com.breakingchains.app.data.repository.AuthRepositoryImpl
 import com.breakingchains.app.ui.navigation.Screen
 import com.breakingchains.app.ui.screens.admin.AdminDashboardScreen
+import com.breakingchains.app.ui.screens.auth.AuthViewModel
+import com.breakingchains.app.ui.screens.auth.ForgotPasswordScreen
+import com.breakingchains.app.ui.screens.auth.LoginScreen
+import com.breakingchains.app.ui.screens.auth.RegisterScreen
 import com.breakingchains.app.ui.screens.relapse.RelapseLogScreen
 import com.breakingchains.app.ui.screens.schedule.ScheduleCallScreen
 import com.breakingchains.app.ui.screens.tracker.UserTrackerScreen
@@ -16,19 +26,94 @@ fun BreakingChainsApp() {
     BreakingChainsTheme {
         val navController = rememberNavController()
 
+        // Persistent Auth Repository & ViewModel binding
+        val authRepository = remember { AuthRepositoryImpl() }
+        val authViewModel: AuthViewModel = viewModel { AuthViewModel(authRepository) }
+
+        val currentUser by authViewModel.currentUser.collectAsState()
+        val loginState by authViewModel.loginState.collectAsState()
+        val registerState by authViewModel.registerState.collectAsState()
+        val forgotPasswordState by authViewModel.forgotPasswordState.collectAsState()
+
+        val startDestination = if (currentUser != null) {
+            if (currentUser?.role == UserRole.ADMIN) Screen.AdminDashboard.route else Screen.UserTracker.route
+        } else {
+            Screen.Login.route
+        }
+
         NavHost(
             navController = navController,
-            startDestination = Screen.UserTracker.route
+            startDestination = startDestination
         ) {
+            // Auth Screens
+            composable(Screen.Login.route) {
+                LoginScreen(
+                    state = loginState,
+                    onEmailChanged = authViewModel::onLoginEmailChanged,
+                    onPasswordChanged = authViewModel::onLoginPasswordChanged,
+                    onRoleSelected = authViewModel::onLoginRoleSelected,
+                    onTogglePasswordVisibility = authViewModel::toggleLoginPasswordVisibility,
+                    onLoginClick = { selectedRole ->
+                        authViewModel.login { role ->
+                            val targetRoute = if (role == UserRole.ADMIN) Screen.AdminDashboard.route else Screen.UserTracker.route
+                            navController.navigate(targetRoute) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
+                            }
+                        }
+                    },
+                    onNavigateToRegister = {
+                        navController.navigate(Screen.Register.route)
+                    },
+                    onNavigateToForgotPassword = {
+                        navController.navigate(Screen.ForgotPassword.route)
+                    }
+                )
+            }
+
+            composable(Screen.Register.route) {
+                RegisterScreen(
+                    state = registerState,
+                    onNameChanged = authViewModel::onRegisterNameChanged,
+                    onEmailChanged = authViewModel::onRegisterEmailChanged,
+                    onPasswordChanged = authViewModel::onRegisterPasswordChanged,
+                    onConfirmPasswordChanged = authViewModel::onRegisterConfirmPasswordChanged,
+                    onRoleSelected = authViewModel::onRegisterRoleSelected,
+                    onTogglePasswordVisibility = authViewModel::toggleRegisterPasswordVisibility,
+                    onRegisterClick = { selectedRole ->
+                        authViewModel.register { role ->
+                            val targetRoute = if (role == UserRole.ADMIN) Screen.AdminDashboard.route else Screen.UserTracker.route
+                            navController.navigate(targetRoute) {
+                                popUpTo(Screen.Register.route) { inclusive = true }
+                            }
+                        }
+                    },
+                    onNavigateToLogin = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(Screen.ForgotPassword.route) {
+                ForgotPasswordScreen(
+                    state = forgotPasswordState,
+                    onEmailChanged = authViewModel::onForgotPasswordEmailChanged,
+                    onResetPasswordClick = authViewModel::resetPassword,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Core App Screens
             composable(Screen.UserTracker.route) {
                 UserTrackerScreen(
-                    onNavigateToLogRelapse = { navController.navigate(Screen.LogRelapse.route) },
+                    onNavigateToLogRelapse = { navController.navigate(Screen.RelapseLog.route) },
                     onNavigateToScheduleCall = { navController.navigate(Screen.ScheduleCall.route) },
                     onNavigateToAdmin = { navController.navigate(Screen.AdminDashboard.route) }
                 )
             }
 
-            composable(Screen.LogRelapse.route) {
+            composable(Screen.RelapseLog.route) {
                 RelapseLogScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
@@ -42,7 +127,12 @@ fun BreakingChainsApp() {
 
             composable(Screen.AdminDashboard.route) {
                 AdminDashboardScreen(
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = {
+                        authViewModel.logout()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
         }
